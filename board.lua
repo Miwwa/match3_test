@@ -1,6 +1,7 @@
-local M = {}
-
+local inspect = require 'inspect'
 local DIFFERENT_ELEMENTS_COUNT = 7
+
+local M = {}
 
 -- board representation
 local table = {}
@@ -25,9 +26,9 @@ end
 -- @param position table with 'x' and 'y' properties
 --
 function M.validateCoords(position)
-    return not position.x or not position.y
+    return not (tonumber(position.x) == nil or tonumber(position.y) == nil
             or position.x < 1 or position.x > #table
-            or position.y < 1 or position.y > #table[1]
+            or position.y < 1 or position.y > #table[1])
 end
 
 --- swap board elements
@@ -35,8 +36,11 @@ end
 -- @param to to position
 --
 function M.move(from, to)
-    if not M.validateCoords(from) or not M.validateCoords(to) then
-        return "Move position out of board"
+    if not M.validateCoords(from) then
+        return 'From position out of board: ' .. inspect(from)
+    end
+    if not M.validateCoords(to) then
+        return 'To position out of board: ' .. inspect(to)
     end
 
     local temp = table[from.x][from.y]
