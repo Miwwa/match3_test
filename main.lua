@@ -1,9 +1,9 @@
 local board = require './board'
 
-local BOARD_SIZE_X = 6
-local BOARD_SIZE_Y = 6
+local BOARD_SIZE_X = 10
+local BOARD_SIZE_Y = 10
 
-board.init(BOARD_SIZE_X, BOARD_SIZE_Y, 1531651838)
+board.init(BOARD_SIZE_X, BOARD_SIZE_Y)
 io.write('Game seed: ' .. board.seed)
 
 local function printHelp()
@@ -66,6 +66,9 @@ local function parseInput(input)
                 return moveResult
             end
         end
+    end
+    if args[1] == 'q' then
+        return nil, 'Quiting...'
     end
     return nil, 'Unknown command, enter "help" to view available commands'
 end

@@ -1,4 +1,4 @@
-local DIFFERENT_ELEMENTS_COUNT = 7
+local DIFFERENT_ELEMENTS_COUNT = 6
 local MATCHED_ELEMENTS_IN_ROW = 3
 
 local M = {}
@@ -104,8 +104,10 @@ function M.init(sizeX, sizeY, seed)
         return 'Minimum board size is 2x2'
     end
 
-    M.seed = tonumber(seed) or os.time()
-    math.randomseed(M.seed)
+    if M.seed == nil or seed ~= M.seed then
+        M.seed = tonumber(seed) or os.time()
+        math.randomseed(M.seed)
+    end
 
     repeat
         board = {}
@@ -274,7 +276,6 @@ end
 
 --- shaffle board elements to create possible moves
 function M.mix()
-    -- temp, todo: change recreating board to shuffle
     M.init(#board, #board[1], M.seed)
 end
 
