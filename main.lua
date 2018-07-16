@@ -1,9 +1,10 @@
 local board = require './board'
 
-local BOARD_SIZE_X = 5
-local BOARD_SIZE_Y = 3
+local BOARD_SIZE_X = 6
+local BOARD_SIZE_Y = 6
 
-board.init(BOARD_SIZE_X, BOARD_SIZE_Y)
+board.init(BOARD_SIZE_X, BOARD_SIZE_Y, 1531651838)
+io.write('Game seed: ' .. board.seed)
 
 local function printHelp()
     local help = [[
@@ -50,7 +51,20 @@ local function parseInput(input)
         end
 
         return function()
-            return board.move(from, to)
+            local moveResult = board.move(from, to)
+            io.write('\nAfter move: \n' .. board.dump())
+            if moveResult == true then
+                while board.tick() == true do
+                    io.write('\nAfter tick:\n' .. board.dump())
+                end
+                if #board.findPossibleMoves() == 0 then
+                    io.write('\nNo have possible moves, mix board...')
+                    board.mix()
+                end
+                return true
+            else
+                return moveResult
+            end
         end
     end
     return nil, 'Unknown command, enter "help" to view available commands'
@@ -58,7 +72,7 @@ end
 
 local input = ''
 while input ~= 'q' do
-    io.write('\n' .. board.dump() .. '\n>')
+    io.write('\nCurrent state:\n' .. board.dump() .. '\n>')
     io.flush()
     input = io.read('*line')
 

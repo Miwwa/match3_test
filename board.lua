@@ -4,6 +4,10 @@ local MATCHED_ELEMENTS_IN_ROW = 3
 local M = {}
 local board = {}
 
+--- get element from board by coords
+-- @param x row
+-- @param y column
+-- return -1 if coords out of board
 local function getAt(x, y)
     if not M.validateCoords(x, y) then
         return -1
@@ -11,26 +15,28 @@ local function getAt(x, y)
     return board[x][y]
 end
 
-local function horizontalMatch(x, y)
-    local result = true
-    for i = 1, MATCHED_ELEMENTS_IN_ROW - 1 do
-        result = result and getAt(x, y) == getAt(x, y - i)
-    end
-    return result
-end
-
-local function verticalMatch(x, y)
-    local result = true
-    for i = 1, MATCHED_ELEMENTS_IN_ROW - 1 do
-        result = result and getAt(x, y) == getAt(x - i, y)
-    end
-    return result
-end
-
+--- helper function for generate board without matches
 local function isMatch(x, y)
+    local function horizontalMatch(x, y)
+        local result = true
+        for i = 1, MATCHED_ELEMENTS_IN_ROW - 1 do
+            result = result and getAt(x, y) == getAt(x, y - i)
+        end
+        return result
+    end
+
+    local function verticalMatch(x, y)
+        local result = true
+        for i = 1, MATCHED_ELEMENTS_IN_ROW - 1 do
+            result = result and getAt(x, y) == getAt(x - i, y)
+        end
+        return result
+    end
+
     return horizontalMatch(x, y) or verticalMatch(x, y)
 end
 
+--- board have at least one match?
 local function haveMatchesOnBoard()
     for i = 1, #board do
         for j = 1, #board[1] do
@@ -42,7 +48,7 @@ local function haveMatchesOnBoard()
     return false
 end
 
----  swap board elements
+--- swap board elements
 -- @param from first element position
 -- @param to second element position
 --
@@ -88,7 +94,7 @@ function M.findPossibleMoves()
     return moves
 end
 
---- Make new random board
+--- Make new random board without matches
 -- @param sizeX Rows count
 -- @param sizeY Columns count
 -- @param seed Random seed, optional
@@ -128,7 +134,7 @@ end
 --- swap board elements
 -- @param from from position
 -- @param to to position
---
+-- return 'true' if move makes new matches, else string error
 function M.move(from, to)
     if not M.validateCoords(from.x, from.y) then
         return 'From position out of board: ' .. from.x .. ' ' .. from.y
@@ -145,6 +151,131 @@ function M.move(from, to)
     end
 
     return true
+end
+
+--- find matches on board, remove them, fall down elements and generate new
+--- return 'true' if board have matches, else 'false'
+function M.tick()
+    local removeMap = {}
+    for i = 1, #board do
+        removeMap[i] = {}
+        for j = 1, #board[i] do
+            removeMap[i][j] = 0
+        end
+    end
+
+    local function handleHorizontalMatches()
+        for i = 1, #board do
+            local colorStreak = 1
+            local currentColor = 0
+            local startStreak = 0
+
+            for j = 1, #board[i] do
+                if getAt(i, j) == currentColor then
+                    colorStreak = colorStreak + 1
+                end
+                if getAt(i, j) ~= currentColor or j == #board[i] then
+                    if colorStreak >= MATCHED_ELEMENTS_IN_ROW then
+--                        print("HORIZONTAL :: Length = " .. colorStreak .. " :: Start = (" .. i .. "," .. startStreak .. ") :: Color = " .. currentColor);
+                        for k = 0, colorStreak - 1 do
+                            removeMap[i][startStreak + k] = 1
+                        end
+                    end
+                    startStreak = j
+                    colorStreak = 1
+                    currentColor = getAt(i, j)
+                end
+            end
+        end
+    end
+
+    local function handleVerticalMatches()
+        for i = 1, #board do
+            local colorStreak = 1
+            local currentColor = 0
+            local startStreak = 0
+
+            for j = 1, #board[i] do
+                if getAt(j, i) == currentColor then
+                    colorStreak = colorStreak + 1
+                end
+                if getAt(j, i) ~= currentColor or j == #board then
+                    if colorStreak >= MATCHED_ELEMENTS_IN_ROW then
+--                        print("VERTICAL :: Length = " .. colorStreak .. " :: Start = (" .. startStreak .. "," .. i .. ") :: Color = " .. currentColor);
+                        for k = 0, colorStreak - 1 do
+                            removeMap[startStreak + k][i] = 1
+                        end
+                    end
+                    startStreak = j
+                    colorStreak = 1
+                    currentColor = getAt(j, i)
+                end
+            end
+        end
+    end
+
+    local function deleteMatches()
+        local deleted = 0
+        for i = 1, #board do
+            for j = 1, #board[i] do
+                if removeMap[i][j] > 0 then
+                    board[i][j] = 0
+                    deleted = deleted + 1
+                end
+            end
+        end
+        return deleted
+    end
+
+    local function fallDown()
+        for column = 1, #board[1] do
+            local swapped = false
+            repeat
+                swapped = false
+                for i = 2, #board do
+                    if board[i][column] == 0 and board[i - 1][column] ~= 0 then
+                        swapElements({ x = i, y = column }, { x = i - 1, y = column })
+                        swapped = true
+                    end
+                end
+            until not swapped
+        end
+    end
+
+    local function fillBoard()
+        for i = 1, #board do
+            for j = 1, #board[i] do
+                if board[i][j] == 0 then
+                    board[i][j] = math.random(1, DIFFERENT_ELEMENTS_COUNT)
+                end
+            end
+        end
+    end
+
+    handleHorizontalMatches()
+    handleVerticalMatches()
+    local deleted = deleteMatches()
+
+--    print('Before fall')
+--    print(M.dump())
+
+    if deleted > 0 then
+        fallDown()
+--        print('After fall')
+--        print(M.dump())
+        fillBoard()
+--        print('After fill')
+--        print(M.dump())
+        return true
+    else
+        return false
+    end
+end
+
+--- shaffle board elements to create possible moves
+function M.mix()
+    -- temp, todo: change recreating board to shuffle
+    M.init(#board, #board[1], M.seed)
 end
 
 --- return a string representation of game board
